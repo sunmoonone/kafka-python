@@ -1,3 +1,137 @@
+# 1.0.1 (Feb 19, 2016)
+
+Consumers
+* Add RangePartitionAssignor (and use as default); add assignor tests (dpkp PR 550)
+* Make sure all consumers are in same generation before stopping group test
+* Verify node ready before sending offset fetch request from coordinator
+* Improve warning when offset fetch request returns unknown topic / partition
+
+Producers
+* Warn if pending batches failed during flush
+* Fix concurrency bug in RecordAccumulator.ready()
+* Fix bug in SimpleBufferPool memory condition waiting / timeout
+* Support batch_size = 0 in producer buffers (dpkp PR 558)
+* Catch duplicate batch.done() calls [e.g., maybe_expire then a response errback]
+
+Clients
+
+Documentation
+* Improve kafka.cluster docstrings
+* Migrate load_example.py to KafkaProducer / KafkaConsumer
+
+Internals
+* Dont override system rcvbuf or sndbuf unless configured explicitly (dpkp PR 557)
+* Some attributes may not exist in __del__ if we failed assertions
+* Break up some circular references and close client wake pipes on __del__ (aisch PR 554)
+
+
+# 1.0.0 (Feb 15, 2016)
+
+This release includes significant code changes. Users of older kafka-python
+versions are encouraged to test upgrades before deploying to production as
+some interfaces and configuration options have changed.
+
+Users of SimpleConsumer / SimpleProducer / SimpleClient (formerly KafkaClient)
+from prior releases should migrate to KafkaConsumer / KafkaProducer. Low-level
+APIs (Simple*) are no longer being actively maintained and will be removed in a
+future release.
+
+For comprehensive API documentation, please see python help() / docstrings,
+kafka-python.readthedocs.org, or run `tox -e docs` from source to build
+documentation locally.
+
+Consumers
+* KafkaConsumer re-written to emulate the new 0.9 kafka consumer (java client)
+  and support coordinated consumer groups (feature requires >= 0.9.0.0 brokers)
+
+  * Methods no longer available:
+
+    * configure [initialize a new consumer instead]
+    * set_topic_partitions [use subscribe() or assign()]
+    * fetch_messages [use poll() or iterator interface]
+    * get_partition_offsets
+    * offsets [use committed(partition)]
+    * task_done [handled internally by auto-commit; or commit offsets manually]
+
+  * Configuration changes (consistent with updated java client):
+
+    * lots of new configuration parameters -- see docs for details
+    * auto_offset_reset: previously values were 'smallest' or 'largest', now
+      values are 'earliest' or 'latest'
+    * fetch_wait_max_ms is now fetch_max_wait_ms
+    * max_partition_fetch_bytes is now max_partition_fetch_bytes
+    * deserializer_class is now value_deserializer and key_deserializer
+    * auto_commit_enable is now enable_auto_commit
+    * auto_commit_interval_messages was removed
+    * socket_timeout_ms was removed
+    * refresh_leader_backoff_ms was removed
+
+* SimpleConsumer and MultiProcessConsumer are now deprecated and will be removed
+  in a future release. Users are encouraged to migrate to KafkaConsumer.
+
+Producers
+* new producer class: KafkaProducer. Exposes the same interface as official java client.
+  Async by default; returned future.get() can be called for synchronous blocking
+* SimpleProducer is now deprecated and will be removed in a future release. Users are
+  encouraged to migrate to KafkaProducer.
+
+Clients
+* synchronous KafkaClient renamed to SimpleClient. For backwards compatibility, you
+  will get a SimpleClient via `from kafka import KafkaClient`. This will change in
+  a future release.
+* All client calls use non-blocking IO under the hood.
+* Add probe method check_version() to infer broker versions.
+
+Documentation
+* Updated README and sphinx documentation to address new classes.
+* Docstring improvements to make python help() easier to use.
+
+Internals
+* Old protocol stack is deprecated. It has been moved to kafka.protocol.legacy
+  and may be removed in a future release.
+* Protocol layer re-written using Type classes, Schemas and Structs (modeled on
+  the java client).
+* Add support for LZ4 compression (including broken framing header checksum).
+
+
+# 0.9.5 (Dec 6, 2015)
+
+Consumers
+* Initial support for consumer coordinator: offsets only (toddpalino PR 420)
+* Allow blocking until some messages are received in SimpleConsumer (saaros PR 457)
+* Support subclass config changes in KafkaConsumer (zackdever PR 446)
+* Support retry semantics in MultiProcessConsumer (barricadeio PR 456)
+* Support partition_info in MultiProcessConsumer (scrapinghub PR 418)
+* Enable seek() to an absolute offset in SimpleConsumer (haosdent PR 412)
+* Add KafkaConsumer.close() (ucarion PR 426)
+
+Producers
+* Catch client.reinit() exceptions in async producer (dpkp)
+* Producer.stop() now blocks until async thread completes (dpkp PR 485)
+* Catch errors during load_metadata_for_topics in async producer (bschopman PR 467)
+* Add compression-level support for codecs that support it (trbs PR 454)
+* Fix translation of Java murmur2 code, fix byte encoding for Python 3 (chrischamberlin PR 439)
+* Only call stop() on not-stopped producer objects (docker-hub PR 435)
+* Allow null payload for deletion feature (scrapinghub PR 409)
+
+Clients
+* Use non-blocking io for broker aware requests (ecanzonieri PR 473)
+* Use debug logging level for metadata request (ecanzonieri PR 415)
+* Catch KafkaUnavailableError in _send_broker_aware_request (mutability PR 436)
+* Lower logging level on replica not available and commit (ecanzonieri PR 415)
+
+Documentation
+* Update docs and links wrt maintainer change (mumrah -> dpkp)
+
+Internals
+* Add py35 to tox testing
+* Update travis config to use container infrastructure
+* Add 0.8.2.2 and 0.9.0.0 resources for integration tests; update default official releases
+* new pylint disables for pylint 1.5.1 (zackdever PR 481)
+* Fix python3 / python2 comments re queue/Queue (dpkp)
+* Add Murmur2Partitioner to kafka __all__ imports (dpkp Issue 471)
+* Include LICENSE in PyPI sdist (koobs PR 441)
+
 # 0.9.4 (June 11, 2015)
 
 Consumers
